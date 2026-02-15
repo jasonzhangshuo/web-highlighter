@@ -1,0 +1,10 @@
+{
+  "name": "web-highlighter",
+  "private": true,
+  "scripts": {
+    "weread-listener": "node scripts/weread-copy-listener.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

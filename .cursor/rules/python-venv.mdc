@@ -1,0 +1,26 @@
+---
+description: Python 依赖只装在项目 venv，不装全局；优先用已有 venv
+alwaysApply: true
+---
+
+# Python 虚拟环境（所有 Python 项目统一遵守）
+
+## 安装依赖前必须做的
+
+1. **先看项目里是否已有虚拟环境**  
+   检查是否存在 `.venv`、`venv` 或 `env` 目录。有则**必须**用这个环境，不要新建第二个，也不要改用系统 Python。
+
+2. **没有 venv 时（新项目）**  
+   - 先创建：`python3 -m venv .venv`（或项目里已有的约定目录）  
+   - 再激活：`source .venv/bin/activate`（Windows 用 `.venv\Scripts\activate`）  
+   - 之后才执行 `pip install` 或 `pip install -r requirements.txt`。  
+   **禁止**在未激活 venv 的情况下执行 pip install。
+
+3. **换电脑 / clone 下来的项目**  
+   - 若项目里有 `requirements.txt`、`pyproject.toml` 或 `Pipfile`，说明依赖是定义好的。  
+   - 本地没有 `.venv` 是正常的（venv 一般不提交）。应：创建 `.venv` → 激活 → 用 `pip install -r requirements.txt`（或项目对应的安装命令）在 venv 里安装。  
+   - **不要**用系统/全局 Python 直接装这些依赖。
+
+## 一句话
+
+所有 Python 依赖都只装在**当前项目的 venv** 里；新项目先建 venv 再装，已有项目优先用已有 venv 和 requirements，绝不装到全局。

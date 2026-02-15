@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Highlighter - 高亮管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 24px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .stats-bar {
+            display: flex;
+            gap: 24px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: white;
+            color: #666;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .highlights-grid {
+            display: grid;
+            gap: 16px;
+        }
+        .highlight-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+        }
+        .highlight-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .highlight-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 12px;
+            border-left: 4px solid #ffc107;
+            padding-left: 16px;
+        }
+        .highlight-note {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 12px;
+        }
+        .highlight-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #888;
+        }
+        .highlight-source {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .highlight-source a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .highlight-source a:hover {
+            text-decoration: underline;
+        }
+        .highlight-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .highlight-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #888;
+            font-size: 12px;
+        }
+        .highlight-actions button:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        .empty-state h2 {
+            margin-bottom: 8px;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .domain-tag {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .date-group {
+            font-size: 14px;
+            color: #666;
+            margin: 24px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+            .toolbar {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div>
+                <h1>💡 Web Highlighter</h1>
+                <p>你的网页高亮笔记库</p>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-count">-</div>
+                    <div class="stat-label">总高亮</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="today-count">-</div>
+                    <div class="stat-label">今日</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="🔍 搜索高亮内容...">
+            </div>
+            <button class="btn btn-secondary" onclick="exportData('json')">📤 导出 JSON</button>
+            <button class="btn btn-secondary" onclick="exportData('markdown')">📝 导出 Markdown</button>
+        </div>
+
+        <div id="highlights-container">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        let allHighlights = [];
+
+        // 加载高亮数据
+        async function loadHighlights() {
+            try {
+                const response = await fetch('/api/highlights');
+                allHighlights = await response.json();
+                renderHighlights(allHighlights);
+                updateStats();
+            } catch (error) {
+                console.error('Load error:', error);
+                document.getElementById('highlights-container').innerHTML = `
+                    <div class="empty-state">
+                        <h2>加载失败</h2>
+                        <p>请刷新页面重试</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 更新统计
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                document.getElementById('total-count').textContent = stats.total;
+                document.getElementById('today-count').textContent = stats.today;
+            } catch (error) {
+                console.error('Stats error:', error);
+            }
+        }
+
+        // 渲染高亮列表
+        function renderHighlights(highlights) {
+            const container = document.getElementById('highlights-container');
+            
+            if (highlights.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h2>暂无高亮内容</h2>
+                        <p>在网页上选中文字，点击"💡 高亮"按钮即可保存</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 按日期分组
+            const grouped = {};
+            highlights.forEach(h => {
+                const date = new Date(h.timestamp).toLocaleDateString('zh-CN');
+                if (!grouped[date]) grouped[date] = [];
+                grouped[date].push(h);
+            });
+
+            let html = '';
+            for (const [date, items] of Object.entries(grouped)) {
+                html += `<div class="date-group">📅 ${date}</div>`;
+                
+                items.forEach(h => {
+                    html += `
+                        <div class="highlight-card" data-id="${h.id}">
+                            <div class="highlight-text">${escapeHtml(h.text)}</div>
+                            ${h.note ? `<div class="highlight-note">📝 ${escapeHtml(h.note)}</div>` : ''}
+                            <div class="highlight-meta">
+                                <div class="highlight-source">
+                                    <span class="domain-tag">${h.domain || '未知'}</span>
+                                    <a href="${h.url}" target="_blank" title="${h.title}">${truncate(h.title || h.url, 40)}</a>
+                                </div>
+                                <div class="highlight-actions">
+                                    <button onclick="copyHighlight('${h.id}')">📋 复制</button>
+                                    <button onclick="deleteHighlight('${h.id}')">🗑️ 删除</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        // 搜索功能
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allHighlights.filter(h => 
+                h.text.toLowerCase().includes(query) ||
+                (h.note && h.note.toLowerCase().includes(query)) ||
+                (h.title && h.title.toLowerCase().includes(query)) ||
+                (h.domain && h.domain.toLowerCase().includes(query))
+            );
+            renderHighlights(filtered);
+        });
+
+        // 复制高亮
+        async function copyHighlight(id) {
+            const h = allHighlights.find(h => h.id === id);
+            if (h) {
+                const text = `${h.text}\n\n—— ${h.title}\n${h.url}`;
+                await navigator.clipboard.writeText(text);
+                alert('已复制到剪贴板！');
+            }
+        }
+
+        // 删除高亮
+        async function deleteHighlight(id) {
+            if (!confirm('确定要删除这条高亮吗？')) return;
+            
+            try {
+                await fetch(`/api/highlights/${id}`, { method: 'DELETE' });
+                allHighlights = allHighlights.filter(h => h.id !== id);
+                renderHighlights(allHighlights);
+                updateStats();
+            } catch (error) {
+                alert('删除失败');
+            }
+        }
+
+        // 导出数据
+        async function exportData(format) {
+            window.open(`/api/export?format=${format}`, '_blank');
+        }
+
+        // 工具函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function truncate(text, len) {
+            return text.length > len ? text.substring(0, len) + '...' : text;
+        }
+
+        // 初始化
+        loadHighlights();
+
+        // 自动刷新
+        setInterval(loadHighlights, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+/* Web Highlighter - 内容脚本样式 */
+
+/* 高亮标记样式 */
+.web-highlighter-mark {
+    background-color: #fff3cd !important;
+    border-bottom: 2px solid #ffc107 !important;
+    padding: 0 2px !important;
+    border-radius: 2px !important;
+}
