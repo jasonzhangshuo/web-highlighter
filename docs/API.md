@@ -32,9 +32,24 @@ GET /api/highlights
     "title": "书名 - 章节",
     "domain": "weread.qq.com",
     "timestamp": "2024-01-13T10:30:00.000Z"
+  },
+  {
+    "id": "abc456",
+    "text": "(随手记)",
+    "note": "快捷键随手记的完整内容",
+    "type": "quick_note",
+    "url": "https://example.com",
+    "title": "页面标题",
+    "domain": "example.com",
+    "timestamp": "2024-01-13T11:00:00.000Z"
   }
 ]
 ```
+
+**字段说明：**
+- `text`：高亮/划线的原文；随手记时为固定占位 `"(随手记)"`，实际内容在 `note`。
+- `note`：用户笔记；随手记时此处为完整内容。
+- `type`（可选）：`"quick_note"` 表示来自快捷键随手记，展示时以 `note` 为主、避免与 `text` 重复。
 
 ### 2. 获取单个高亮
 

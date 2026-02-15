@@ -117,6 +117,16 @@
             border-left: 4px solid #ffc107;
             padding-left: 16px;
         }
+        .quick-note-tag {
+            display: inline-block;
+            font-size: 12px;
+            color: #667eea;
+            background: #e8ecff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
         .highlight-note {
             background: #fff3cd;
             padding: 12px;
@@ -125,6 +135,64 @@
             color: #856404;
             margin-bottom: 12px;
         }
+        .highlight-note-content,
+        .quick-note-content {
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .highlight-text .quick-note-content {
+            display: block;
+            margin-top: 6px;
+        }
+        .quick-note-collapse {
+            margin-top: 6px;
+        }
+        .quick-note-collapse .quick-note-body {
+            max-height: 8em;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+        .quick-note-collapse.is-expanded .quick-note-body {
+            max-height: none;
+        }
+        .quick-note-collapse .btn-expand-toggle,
+        .note-collapse .btn-expand-toggle {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 10px;
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            background: rgba(102, 126, 234, 0.08);
+            color: #667eea;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .quick-note-collapse .btn-expand-toggle:hover,
+        .note-collapse .btn-expand-toggle:hover {
+            background: rgba(102, 126, 234, 0.15);
+        }
+        .note-collapse .note-body {
+            max-height: 8em;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+        .note-collapse.is-expanded .note-body {
+            max-height: none;
+        }
+        .highlight-note-content strong,
+        .quick-note-content strong { font-weight: 600; color: #664d04; }
+        .highlight-note-content em,
+        .quick-note-content em { font-style: italic; }
+        .highlight-note-content ul,
+        .quick-note-content ul { margin: 8px 0; padding-left: 20px; }
+        .highlight-note-content ol,
+        .quick-note-content ol { margin: 8px 0; padding-left: 20px; }
+        .highlight-note-content p,
+        .quick-note-content p { margin: 8px 0; }
+        .highlight-note-content p:first-child,
+        .quick-note-content p:first-child { margin-top: 0; }
+        .highlight-note-content p:last-child,
+        .quick-note-content p:last-child { margin-bottom: 0; }
         .highlight-meta {
             display: flex;
             justify-content: space-between;
@@ -160,6 +228,46 @@
         .highlight-actions button:hover {
             background: #f5f5f5;
             color: #333;
+        }
+        .highlight-note-edit {
+            margin-bottom: 12px;
+        }
+        .highlight-note-edit textarea {
+            width: 100%;
+            min-height: 72px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .highlight-note-edit textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        .highlight-note-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .highlight-note-actions button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .btn-save-note {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-cancel-note {
+            background: #f0f0f0;
+            color: #666;
         }
         .empty-state {
             text-align: center;
@@ -294,18 +402,36 @@
                 html += `<div class="date-group">📅 ${date}</div>`;
                 
                 items.forEach(h => {
+                    const safeId = escapeHtml(h.id);
+                    const isQuickNote = h.type === 'quick_note';
+                    const mainContent = isQuickNote ? (h.note || '') : h.text;
+                    const mainDisplay = isQuickNote
+                        ? `<div class="quick-note-collapse">
+                            <div class="quick-note-body"><div class="quick-note-content">${renderMarkdown(mainContent)}</div></div>
+                            <button type="button" class="btn-expand-toggle">展开</button>
+                           </div>`
+                        : escapeHtml(mainContent);
+                    const noteBlock = isQuickNote ? '' : (h.note
+                        ? `<div class="highlight-note">📝 <div class="note-collapse">
+                            <div class="note-body"><div class="highlight-note-content">${renderMarkdown(h.note)}</div></div>
+                            <button type="button" class="btn-expand-toggle">展开</button>
+                           </div></div>`
+                        : '');
                     html += `
-                        <div class="highlight-card" data-id="${h.id}">
-                            <div class="highlight-text">${escapeHtml(h.text)}</div>
-                            ${h.note ? `<div class="highlight-note">📝 ${escapeHtml(h.note)}</div>` : ''}
+                        <div class="highlight-card" data-id="${safeId}">
+                            <div class="highlight-text">${isQuickNote ? '<span class="quick-note-tag">随手记</span> ' : ''}${mainDisplay}</div>
+                            <div class="highlight-note-wrap" data-id="${safeId}">
+                                ${noteBlock}
+                            </div>
                             <div class="highlight-meta">
                                 <div class="highlight-source">
                                     <span class="domain-tag">${h.domain || '未知'}</span>
                                     <a href="${h.url}" target="_blank" title="${h.title}">${truncate(h.title || h.url, 40)}</a>
                                 </div>
                                 <div class="highlight-actions">
-                                    <button onclick="copyHighlight('${h.id}')">📋 复制</button>
-                                    <button onclick="deleteHighlight('${h.id}')">🗑️ 删除</button>
+                                    <button onclick="copyHighlight('${safeId}')">📋 复制</button>
+                                    <button class="btn-edit-note" data-id="${safeId}">${h.note ? '📝 编辑笔记' : '📝 添加笔记'}</button>
+                                    <button onclick="deleteHighlight('${safeId}')">🗑️ 删除</button>
                                 </div>
                             </div>
                         </div>
@@ -315,6 +441,15 @@
 
             container.innerHTML = html;
         }
+
+        // 随手记 / 笔记 折叠展开
+        document.getElementById('highlights-container').addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-expand-toggle')) return;
+            const wrap = e.target.closest('.quick-note-collapse') || e.target.closest('.note-collapse');
+            if (!wrap) return;
+            wrap.classList.toggle('is-expanded');
+            e.target.textContent = wrap.classList.contains('is-expanded') ? '收起' : '展开';
+        });
 
         // 搜索功能
         document.getElementById('search-input').addEventListener('input', (e) => {
@@ -352,6 +487,55 @@
             }
         }
 
+        // 点击「编辑笔记」/「添加笔记」：在卡片内展开编辑框
+        document.getElementById('highlights-container').addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-edit-note')) return;
+            const id = e.target.getAttribute('data-id');
+            if (!id) return;
+            const card = e.target.closest('.highlight-card');
+            const wrap = card && card.querySelector('.highlight-note-wrap');
+            if (!wrap) return;
+            const h = allHighlights.find(x => x.id === id);
+            const currentNote = (h && h.note) ? h.note : '';
+            wrap.innerHTML = `
+                <div class="highlight-note-edit">
+                    <textarea placeholder="写下你对这段高亮的想法..." rows="3">${escapeHtml(currentNote)}</textarea>
+                    <div class="highlight-note-actions">
+                        <button class="btn-save-note" data-id="${escapeHtml(id)}">保存</button>
+                        <button class="btn-cancel-note" data-id="${escapeHtml(id)}">取消</button>
+                    </div>
+                </div>
+            `;
+            const textarea = wrap.querySelector('textarea');
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        });
+
+        // 保存笔记 / 取消
+        document.getElementById('highlights-container').addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            if (!id) return;
+            if (e.target.classList.contains('btn-save-note')) {
+                const card = e.target.closest('.highlight-card');
+                const textarea = card && card.querySelector('.highlight-note-edit textarea');
+                const note = textarea ? textarea.value.trim() : '';
+                try {
+                    await fetch(`/api/highlights/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ note: note })
+                    });
+                    const idx = allHighlights.findIndex(h => h.id === id);
+                    if (idx !== -1) allHighlights[idx].note = note;
+                    renderHighlights(allHighlights);
+                } catch (err) {
+                    alert('保存笔记失败');
+                }
+            } else if (e.target.classList.contains('btn-cancel-note')) {
+                loadHighlights();
+            }
+        });
+
         // 导出数据
         async function exportData(format) {
             window.open(`/api/export?format=${format}`, '_blank');
@@ -359,20 +543,36 @@
 
         // 工具函数
         function escapeHtml(text) {
+            if (text == null) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
+        // 简易 Markdown：先转义防 XSS，再支持换行、加粗、斜体
+        function renderMarkdown(text) {
+            if (!text) return '';
+            let s = escapeHtml(text);
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            s = s.replace(/\n/g, '<br>');
+            return s;
+        }
+
         function truncate(text, len) {
+            text = text || '';
             return text.length > len ? text.substring(0, len) + '...' : text;
         }
 
         // 初始化
         loadHighlights();
 
-        // 自动刷新
-        setInterval(loadHighlights, 30000);
+        // 自动刷新：若当前有笔记正在编辑，不刷新列表，避免输入框被重绘掉
+        setInterval(() => {
+            const container = document.getElementById('highlights-container');
+            if (container && container.querySelector('.highlight-note-edit')) return;
+            loadHighlights();
+        }, 30000);
     </script>
 </body>
 </html>

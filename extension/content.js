@@ -89,14 +89,15 @@
         return null;
     }
 
-    function saveToServer(text, note) {
+    function saveToServer(text, note, extra) {
         const data = {
             text: text,
             note: note || '',
             url: window.location.href,
             title: document.title,
             domain: window.location.hostname,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            ...(extra || {})
         };
         return fetch(`${SERVER_URL}/api/highlights`, {
             method: 'POST',
@@ -110,6 +111,126 @@
             return false;
         });
     }
+
+    /** 右键「添加笔记并保存」时弹出的笔记输入框 */
+    function showNoteDialog(selectionText) {
+        const existing = document.getElementById('wh-note-dialog-wrap');
+        if (existing) existing.remove();
+
+        const wrap = document.createElement('div');
+        wrap.id = 'wh-note-dialog-wrap';
+        wrap.style.cssText = `
+            position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+            z-index: 2147483646 !important; display: flex !important; align-items: center !important; justify-content: center !important;
+            background: rgba(0,0,0,0.4) !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        `;
+        const box = document.createElement('div');
+        box.style.cssText = `
+            background: white !important; border-radius: 12px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+            padding: 20px !important; width: 90% !important; max-width: 400px !important; box-sizing: border-box !important;
+        `;
+        const preview = selectionText.length > 60 ? selectionText.substring(0, 60) + '…' : selectionText;
+        box.innerHTML = `
+            <div style="font-size: 13px; color: #666; margin-bottom: 12px;">高亮内容：</div>
+            <div style="font-size: 14px; color: #333; line-height: 1.5; margin-bottom: 16px; padding: 10px; background: #f5f5f5; border-radius: 8px;">${escapeHtml(preview)}</div>
+            <label style="font-size: 13px; color: #666; display: block; margin-bottom: 8px;">你的笔记（可选）：</label>
+            <textarea id="wh-note-input" placeholder="写下你对这段内容的想法..." rows="4" style="
+                width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; box-sizing: border-box;
+            "></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end;">
+                <button id="wh-note-cancel" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 14px;">取消</button>
+                <button id="wh-note-save" style="padding: 10px 18px; border-radius: 8px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; font-size: 14px;">保存</button>
+            </div>
+        `;
+        wrap.appendChild(box);
+
+        const remove = function() {
+            const w = document.getElementById('wh-note-dialog-wrap');
+            if (w) w.remove();
+        };
+
+        box.querySelector('#wh-note-save').addEventListener('click', function() {
+            const note = (box.querySelector('#wh-note-input').value || '').trim();
+            saveToServer(selectionText, note).then(function(ok) {
+                remove();
+                if (ok) showToast('✅ 已保存到 Web Highlighter', 'success');
+            });
+        });
+        box.querySelector('#wh-note-cancel').addEventListener('click', remove);
+        wrap.addEventListener('click', function(e) {
+            if (e.target === wrap) remove();
+        });
+
+        document.body.appendChild(wrap);
+        box.querySelector('#wh-note-input').focus();
+    }
+
+    /** 快捷键唤出：随手记输入框（无选中文字，只记录想法） */
+    function showQuickNoteDialog() {
+        var existing = document.getElementById('wh-quick-note-wrap');
+        if (existing) existing.remove();
+        if (!document.body) return;
+        var wrap = document.createElement('div');
+        wrap.id = 'wh-quick-note-wrap';
+        wrap.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:20px;width:90%;max-width:400px;box-sizing:border-box;';
+        box.innerHTML = '<div style="font-size:15px;color:#333;margin-bottom:12px;">\u968f\u624b\u8bb0</div><textarea id="wh-quick-note-input" placeholder="\u8bb0\u4e0b\u4f60\u7684\u60f3\u6cd5\u2026\u2026" rows="5" style="width:100%;padding:12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea><div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;"><button type="button" id="wh-quick-note-cancel" style="padding:10px 18px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px;">\u53d6\u6d88</button><button type="button" id="wh-quick-note-save" style="padding:10px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;cursor:pointer;font-size:14px;">\u4fdd\u5b58</button></div>';
+        wrap.appendChild(box);
+        function remove() { var w = document.getElementById('wh-quick-note-wrap'); if (w) w.remove(); }
+        var saveBtn = box.querySelector('#wh-quick-note-save');
+        var cancelBtn = box.querySelector('#wh-quick-note-cancel');
+        saveBtn.addEventListener('click', function() {
+            if (!document.getElementById('wh-quick-note-wrap')) return;
+            var note = (box.querySelector('#wh-quick-note-input').value || '').trim();
+            if (!note) { remove(); return; }
+            saveToServer('(随手记)', note, { type: 'quick_note' }).then(function(ok) {
+                if (!document.getElementById('wh-quick-note-wrap')) return;
+                remove();
+                if (ok) showToast('\u5df2\u4fdd\u5b58\u5230 Web Highlighter', 'success');
+            });
+        });
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            remove();
+        }, true);
+        wrap.addEventListener('click', function(e) { if (e.target === wrap) remove(); });
+        document.body.appendChild(wrap);
+        box.querySelector('#wh-quick-note-input').focus();
+    }
+
+    chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+        if (msg.action === 'showNoteDialog' && msg.selectionText) {
+            try {
+                if (!document.body) {
+                    sendResponse({ ok: false, error: 'no body' });
+                    return true;
+                }
+                showNoteDialog(msg.selectionText);
+                sendResponse({ ok: true });
+            } catch (e) {
+                console.error('[Web Highlighter] showNoteDialog error', e);
+                sendResponse({ ok: false, error: String(e.message) });
+            }
+            return true;
+        }
+        if (msg.action === 'showQuickNoteDialog') {
+            try {
+                if (!document.body) {
+                    sendResponse({ ok: false, error: 'no body' });
+                    return true;
+                }
+                showQuickNoteDialog();
+                sendResponse({ ok: true });
+            } catch (e) {
+                console.error('[Web Highlighter] showQuickNoteDialog error', e);
+                sendResponse({ ok: false, error: String(e.message) });
+            }
+            return true;
+        }
+        return true;
+    });
 
     function syncHighlight(node, text, note) {
         if (syncedNodes.has(node)) return;
@@ -145,7 +266,8 @@
 
     function walkAndCollectHighlights(root) {
         if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
-        if (root.id === 'wh-toast' || root.id === 'wh-dialog') return;
+        if (root.id === 'wh-toast' || root.id === 'wh-dialog' || root.id === 'wh-note-dialog-wrap' || root.id === 'wh-quick-note-wrap') return;
+        if (root.closest && (root.closest('#wh-note-dialog-wrap') || root.closest('#wh-quick-note-wrap'))) return;
         
         if (isLikelyHighlightNode(root)) {
             processNewNode(root);
@@ -186,6 +308,7 @@
     let _lastTime = 0;
 
     // 监听复制：用「当前选区」取文字（微信读书点复制时 clipboardData 常为空，选区仍在）
+    // 与 main 保持一致，不增加 top frame / writeText 钩子等，避免在 develop 上行为偏离
     document.addEventListener('copy', function(e) {
         if (!IS_WEREAD) return;
         const fromSelection = (window.getSelection && window.getSelection().toString()) || '';

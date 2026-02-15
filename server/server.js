@@ -134,7 +134,11 @@ app.post('/api/highlights', (req, res) => {
     const domain = req.body.domain || '';
     const timestamp = req.body.timestamp || new Date().toISOString();
 
+    const preview = text.length > 40 ? text.substring(0, 40) + '…' : text;
+    console.log(`[POST /api/highlights] text(前40字): ${preview}`);
+
     if (isDuplicate(db, text, url)) {
+        console.log(`[POST /api/highlights] 去重跳过 (同 url+text 60s 内已存在)`);
         const existing = db.highlights.find(h => h.url === url && h.text === text);
         return res.status(201).json(existing || { id: '', text, note, url, title, domain, timestamp });
     }
@@ -148,6 +152,7 @@ app.post('/api/highlights', (req, res) => {
         domain,
         timestamp
     };
+    if (req.body.type) newHighlight.type = req.body.type;
 
     db.highlights.push(newHighlight);
 
