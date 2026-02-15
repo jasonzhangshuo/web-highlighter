@@ -2,6 +2,7 @@
   "name": "web-highlighter",
   "private": true,
   "scripts": {
+    "start": "node server/server.js",
     "weread-listener": "node scripts/weread-copy-listener.js"
   },
   "devDependencies": {
