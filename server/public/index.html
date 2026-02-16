@@ -290,12 +290,49 @@
             border-radius: 12px;
             font-size: 12px;
         }
-        .date-group {
+        .date-group,
+        .book-group {
             font-size: 14px;
             color: #666;
             margin: 24px 0 12px;
             padding-bottom: 8px;
             border-bottom: 1px solid #e0e0e0;
+        }
+        .book-group {
+            font-weight: 600;
+            color: #667eea;
+        }
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: #f0f0f0;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .view-toggle button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            background: transparent;
+            color: #666;
+        }
+        .view-toggle button.active {
+            background: white;
+            color: #667eea;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .book-filter {
+            min-width: 220px;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
         }
         @media (max-width: 768px) {
             .header-content {
@@ -333,6 +370,13 @@
             <div class="search-box">
                 <input type="text" id="search-input" placeholder="🔍 搜索高亮内容...">
             </div>
+            <div class="view-toggle">
+                <button type="button" id="view-by-time" class="active">📅 按时间</button>
+                <button type="button" id="view-by-book">📚 按书名</button>
+            </div>
+            <select id="book-filter" class="book-filter" style="display: none;" title="选择一本书查看笔记">
+                <option value="">全部书籍</option>
+            </select>
             <button class="btn btn-secondary" onclick="exportData('json')">📤 导出 JSON</button>
             <button class="btn btn-secondary" onclick="exportData('markdown')">📝 导出 Markdown</button>
         </div>
@@ -344,12 +388,39 @@
 
     <script>
         let allHighlights = [];
+        let viewMode = 'time';   // 'time' | 'book'
+        let selectedBook = '';   // 按书名时选中的书（空为全部）
+
+        // 从 title 提取书名（微信读书等：书名在第一个 " - " 前）
+        function getBookFromTitle(title) {
+            if (!title || typeof title !== 'string') return '未分类';
+            const part = title.split(' - ')[0].trim();
+            return part || '未分类';
+        }
+
+        // 获取当前列表中的唯一书名列表（按笔记数量降序）
+        function getUniqueBooks(highlights) {
+            const count = {};
+            highlights.forEach(h => {
+                const book = getBookFromTitle(h.title);
+                count[book] = (count[book] || 0) + 1;
+            });
+            return Object.entries(count)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name]) => name);
+        }
 
         // 加载高亮数据
         async function loadHighlights() {
             try {
                 const response = await fetch('/api/highlights');
                 allHighlights = await response.json();
+                if (viewMode === 'book') {
+                    const bookFilterEl = document.getElementById('book-filter');
+                    const books = getUniqueBooks(allHighlights);
+                    bookFilterEl.innerHTML = '<option value="">全部书籍</option>' +
+                        books.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+                }
                 renderHighlights(allHighlights);
                 updateStats();
             } catch (error) {
@@ -389,17 +460,35 @@
                 return;
             }
 
-            // 按日期分组
-            const grouped = {};
-            highlights.forEach(h => {
-                const date = new Date(h.timestamp).toLocaleDateString('zh-CN');
-                if (!grouped[date]) grouped[date] = [];
-                grouped[date].push(h);
-            });
+            const byBook = viewMode === 'book';
+            let grouped;
+            if (byBook) {
+                // 按书名分组，可选只显示某一本
+                grouped = {};
+                highlights.forEach(h => {
+                    const book = getBookFromTitle(h.title);
+                    if (selectedBook && book !== selectedBook) return;
+                    if (!grouped[book]) grouped[book] = [];
+                    grouped[book].push(h);
+                });
+                // 每组内按时间倒序
+                Object.keys(grouped).forEach(book => {
+                    grouped[book].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                });
+            } else {
+                // 按日期分组
+                grouped = {};
+                highlights.forEach(h => {
+                    const date = new Date(h.timestamp).toLocaleDateString('zh-CN');
+                    if (!grouped[date]) grouped[date] = [];
+                    grouped[date].push(h);
+                });
+            }
 
             let html = '';
-            for (const [date, items] of Object.entries(grouped)) {
-                html += `<div class="date-group">📅 ${date}</div>`;
+            const groupLabel = byBook ? '📚' : '📅';
+            for (const [groupKey, items] of Object.entries(grouped)) {
+                html += `<div class="${byBook ? 'book-group' : 'date-group'}">${groupLabel} ${escapeHtml(groupKey)}${byBook ? ` <span style="font-weight:400;color:#888;">(${items.length} 条)</span>` : ''}</div>`;
                 
                 items.forEach(h => {
                     const safeId = escapeHtml(h.id);
@@ -441,6 +530,36 @@
 
             container.innerHTML = html;
         }
+
+        // 切换「按时间 / 按书名」并刷新书籍下拉
+        function setViewMode(mode) {
+            viewMode = mode;
+            const byTime = document.getElementById('view-by-time');
+            const byBook = document.getElementById('view-by-book');
+            const bookFilterEl = document.getElementById('book-filter');
+            if (mode === 'time') {
+                byTime.classList.add('active');
+                byBook.classList.remove('active');
+                bookFilterEl.style.display = 'none';
+                selectedBook = '';
+            } else {
+                byTime.classList.remove('active');
+                byBook.classList.add('active');
+                bookFilterEl.style.display = '';
+                const books = getUniqueBooks(allHighlights);
+                bookFilterEl.innerHTML = '<option value="">全部书籍</option>' +
+                    books.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+                if (selectedBook && !books.includes(selectedBook)) selectedBook = '';
+            }
+            renderHighlights(allHighlights);
+        }
+
+        document.getElementById('view-by-time').addEventListener('click', () => setViewMode('time'));
+        document.getElementById('view-by-book').addEventListener('click', () => setViewMode('book'));
+        document.getElementById('book-filter').addEventListener('change', (e) => {
+            selectedBook = e.target.value || '';
+            renderHighlights(allHighlights);
+        });
 
         // 随手记 / 笔记 折叠展开
         document.getElementById('highlights-container').addEventListener('click', (e) => {
